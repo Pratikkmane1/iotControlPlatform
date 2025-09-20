@@ -1,0 +1,792 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Widget DataStream Config</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+      color: #2c3e50;
+      line-height: 1.6;
+      min-height: 100vh;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    
+    .container {
+      width: 100%;
+      max-width: 1200px;
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+      overflow: hidden;
+    }
+    
+    header {
+      background: linear-gradient(135deg, #3498db 0%, #2c3e50 100%);
+      color: white;
+      padding: 25px 30px;
+      text-align: center;
+    }
+    
+    header h1 {
+      font-weight: 600;
+      font-size: 28px;
+      margin-bottom: 10px;
+    }
+    
+    header p {
+      opacity: 0.9;
+      font-size: 16px;
+    }
+    
+    .content {
+      padding: 30px;
+      text-align: center;
+    }
+    
+    .content h2 {
+      color: #3498db;
+      margin-bottom: 15px;
+      font-weight: 500;
+    }
+    
+    .content p {
+      color: #7f8c8d;
+      max-width: 600px;
+      margin: 0 auto 25px;
+      line-height: 1.6;
+    }
+    
+    .widget-icon {
+      font-size: 64px;
+      color: #3498db;
+      margin: 20px 0;
+    }
+    
+    .btn {
+      display: inline-block;
+      background: #3498db;
+      color: white;
+      padding: 12px 25px;
+      border-radius: 30px;
+      text-decoration: none;
+      font-weight: 500;
+      border: none;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 10px rgba(52, 152, 219, 0.3);
+    }
+    
+    .btn:hover {
+      background: #2980b9;
+      transform: translateY(-2px);
+      box-shadow: 0 6px 15px rgba(52, 152, 219, 0.4);
+    }
+    
+    .btn i {
+      margin-right: 8px;
+    }
+    
+    /* Modal Styles */
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.6);
+      backdrop-filter: blur(5px);
+      z-index: 1000;
+      justify-content: center;
+      align-items: center;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+    
+    .modal.active {
+      display: flex;
+      opacity: 1;
+    }
+    
+    .modal-content {
+      background: white;
+      width: 90%;
+      max-width: 600px;
+      max-height: 90vh;
+      overflow-y: auto;
+      border-radius: 16px;
+      box-shadow: 0 15px 40px rgba(0, 0, 0, 0.2);
+      transform: translateY(20px);
+      transition: transform 0.4s ease;
+    }
+    
+    .modal.active .modal-content {
+      transform: translateY(0);
+    }
+    
+    .modal-header {
+      padding: 20px 25px;
+      background: linear-gradient(135deg, #3498db 0%, #2c3e50 100%);
+      color: white;
+      border-top-left-radius: 16px;
+      border-top-right-radius: 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .modal-header h3 {
+      font-weight: 500;
+      font-size: 20px;
+    }
+    
+    .close-modal {
+      background: none;
+      border: none;
+      color: white;
+      font-size: 24px;
+      cursor: pointer;
+      transition: transform 0.3s ease;
+    }
+    
+    .close-modal:hover {
+      transform: rotate(90deg);
+    }
+    
+    .modal-body {
+      padding: 25px;
+    }
+    
+    .form-group {
+      margin-bottom: 20px;
+      text-align: left;
+    }
+    
+    .form-group label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 500;
+      color: #2c3e50;
+    }
+    
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+      width: 100%;
+      padding: 12px 15px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      font-size: 16px;
+      transition: all 0.3s ease;
+    }
+    
+    .form-group input:focus,
+    .form-group select:focus,
+    .form-group textarea:focus {
+      border-color: #3498db;
+      box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.2);
+      outline: none;
+    }
+    
+    .form-row {
+      display: flex;
+      gap: 15px;
+      margin-bottom: 20px;
+    }
+    
+    .form-row .form-group {
+      flex: 1;
+      margin-bottom: 0;
+    }
+    
+    .checkbox-group {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    
+    .checkbox-group input {
+      width: auto;
+    }
+    
+    .modal-footer {
+      padding: 20px 25px;
+      background: #f8f9fa;
+      border-bottom-left-radius: 16px;
+      border-bottom-right-radius: 16px;
+      display: flex;
+      justify-content: flex-end;
+      gap: 12px;
+    }
+    
+    .btn-secondary {
+      background: #95a5a6;
+      box-shadow: 0 4px 10px rgba(149, 165, 166, 0.3);
+    }
+    
+    .btn-secondary:hover {
+      background: #7f8c8d;
+      box-shadow: 0 6px 15px rgba(149, 165, 166, 0.4);
+    }
+    
+    .btn-danger {
+      background: #e74c3c;
+      box-shadow: 0 4px 10px rgba(231, 76, 60, 0.3);
+    }
+    
+    .btn-danger:hover {
+      background: #c0392b;
+      box-shadow: 0 6px 15px rgba(231, 76, 60, 0.4);
+    }
+    
+    /* Widget type indicator */
+    .widget-type {
+      display: inline-block;
+      padding: 5px 12px;
+      background: rgba(52, 152, 219, 0.1);
+      color: #3498db;
+      border-radius: 20px;
+      font-size: 14px;
+      margin-top: 10px;
+    }
+    
+    /* Responsive adjustments */
+    @media (max-width: 768px) {
+      .form-row {
+        flex-direction: column;
+        gap: 0;
+      }
+      
+      .modal-content {
+        width: 95%;
+      }
+      
+      header {
+        padding: 20px;
+      }
+      
+      .content {
+        padding: 20px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1><i class="fas fa-sliders-h"></i> Widget Configuration</h1>
+      <p>Customize your widget properties and data streams</p>
+    </header>
+    
+    <div class="content">
+      <div class="widget-icon">
+        <i class="fas fa-cog"></i>
+      </div>
+      <h2>Configure Your Widget</h2>
+      <p>Click the button below to configure your widget properties, data streams, and visualization settings.</p>
+      <button class="btn" onclick="openWidgetModal()">
+        <i class="fas fa-plus"></i> Configure Widget
+      </button>
+      <div id="widget-type-display" class="widget-type"></div>
+    </div>
+  </div>
+
+  <!-- Modal -->
+  <div id="widgetModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="modalTitle">Configure Widget</h3>
+        <button class="close-modal" onclick="closeWidgetModal()">&times;</button>
+      </div>
+      <div class="modal-body" id="widgetConfigBody">
+        <!-- Form will be injected dynamically -->
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeWidgetModal()">Cancel</button>
+        <button class="btn" onclick="saveWidgetConfig()">Save Configuration</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+  // Parse query params
+  function getQueryParams() {
+    const params = new URLSearchParams(window.location.search);
+    return {
+      templateId: params.get("templateId"),
+      widgetId: params.get("widgetId"),
+      type: params.get("type")
+    };
+  }
+
+  // Generate config forms for widgets
+  function getFormForWidget(widget) {
+    switch (widget.type) {
+      case "switch":
+        return `
+          <form id="widgetForm">
+            <input type="hidden" name="templateId" value="${widget.templateId}">
+            <input type="hidden" name="widgetId" value="${widget.id}">
+            <input type="hidden" name="type" value="${widget.type}">
+            
+            <div class="form-group">
+              <label>Title</label>
+              <input type="text" name="title" placeholder="My Switch">
+            </div>
+            
+            <div class="form-group">
+              <label>Datastream</label>
+              <select name="datastream">
+                <option value="">Select a datastream</option>
+                <option value="ds1">Datastream 1</option>
+                <option value="ds2">Datastream 2</option>
+                <option value="ds3">Datastream 3</option>
+              </select>
+            </div>
+            
+            <div class="form-row">
+              <div class="form-group">
+                <label>On Value</label>
+                <input type="text" name="onValue" value="1">
+              </div>
+              
+              <div class="form-group">
+                <label>Off Value</label>
+                <input type="text" name="offValue" value="0">
+              </div>
+            </div>
+            
+            <div class="form-group checkbox-group">
+              <input type="checkbox" name="showLabels" id="showLabels">
+              <label for="showLabels">Show On/Off Labels</label>
+            </div>
+            
+            <div class="form-row">
+              <div class="form-group">
+                <label>On Label</label>
+                <input type="text" name="onLabel" placeholder="ON">
+              </div>
+              
+              <div class="form-group">
+                <label>Off Label</label>
+                <input type="text" name="offLabel" placeholder="OFF">
+              </div>
+            </div>
+            
+            <div class="form-group">
+              <label>Label Position</label>
+              <select name="labelPosition">
+                <option value="left">Left</option>
+                <option value="right">Right</option>
+                <option value="top">Top</option>
+                <option value="bottom">Bottom</option>
+              </select>
+            </div>
+            
+            <div class="form-group checkbox-group">
+              <input type="checkbox" name="hideName" id="hideName">
+              <label for="hideName">Hide Widget Name</label>
+            </div>
+          </form>
+        `;
+
+      case "slider":
+        return `
+          <form id="widgetForm">
+            <input type="hidden" name="templateId" value="${widget.templateId}">
+            <input type="hidden" name="widgetId" value="${widget.id}">
+            <input type="hidden" name="type" value="${widget.type}">
+            
+            <div class="form-group">
+              <label>Title</label>
+              <input type="text" name="title" placeholder="My Slider">
+            </div>
+            
+            <div class="form-group">
+              <label>Datastream</label>
+              <select name="datastream">
+                <option value="">Select a datastream</option>
+                <option value="ds1">Datastream 1</option>
+                <option value="ds2">Datastream 2</option>
+                <option value="ds3">Datastream 3</option>
+              </select>
+            </div>
+            
+            <div class="form-group">
+              <label>Color</label>
+              <input type="color" name="color" value="#3498db">
+            </div>
+            
+            <div class="form-group checkbox-group">
+              <input type="checkbox" name="sendOnRelease" id="sendOnRelease">
+              <label for="sendOnRelease">Send Values on Release Only</label>
+            </div>
+            
+            <div class="form-row">
+              <div class="form-group">
+                <label>Min Value</label>
+                <input type="number" name="min" value="0">
+              </div>
+              
+              <div class="form-group">
+                <label>Max Value</label>
+                <input type="number" name="max" value="100">
+              </div>
+            </div>
+            
+            <div class="form-group">
+              <label>Step</label>
+              <input type="number" name="step" value="1" min="0.1" step="0.1">
+            </div>
+            
+            <div class="form-group checkbox-group">
+              <input type="checkbox" name="showFine" id="showFine">
+              <label for="showFine">Show Fine Controls</label>
+            </div>
+            
+            <div class="form-group">
+              <label>Value Position</label>
+              <select name="valuePosition">
+                <option value="left">Left</option>
+                <option value="right">Right</option>
+                <option value="top">Top</option>
+                <option value="bottom">Bottom</option>
+              </select>
+            </div>
+          </form>
+        `;
+
+      case "gauge":
+        return `
+          <form id="widgetForm">
+            <input type="hidden" name="templateId" value="${widget.templateId}">
+            <input type="hidden" name="widgetId" value="${widget.id}">
+            <input type="hidden" name="type" value="${widget.type}">
+            
+            <div class="form-group">
+              <label>Title</label>
+              <input type="text" name="title" placeholder="My Gauge">
+            </div>
+            
+            <div class="form-group">
+              <label>Datastream</label>
+              <select name="datastream">
+                <option value="">Select a datastream</option>
+                <option value="ds1">Datastream 1</option>
+                <option value="ds2">Datastream 2</option>
+                <option value="ds3">Datastream 3</option>
+              </select>
+            </div>
+            
+            <div class="form-group checkbox-group">
+              <input type="checkbox" name="overrideRange" id="overrideRange">
+              <label for="overrideRange">Override Datastream Min/Max</label>
+            </div>
+            
+            <div class="form-row">
+              <div class="form-group">
+                <label>Min</label>
+                <input type="number" name="min" value="0">
+              </div>
+              
+              <div class="form-group">
+                <label>Max</label>
+                <input type="number" name="max" value="100">
+              </div>
+            </div>
+            
+            <div class="form-group">
+              <label>Units</label>
+              <input type="text" name="units" placeholder="e.g. °C, %">
+            </div>
+            
+            <div class="form-group checkbox-group">
+              <input type="checkbox" name="colorByValue" id="colorByValue">
+              <label for="colorByValue">Change Color Based on Value</label>
+            </div>
+            
+            <div class="form-group">
+              <label>Gradient Stops (comma separated colors)</label>
+              <input type="text" name="gradient" placeholder="#00FF00,#FFFF00,#FF0000">
+            </div>
+          </form>
+        `;
+
+       case "button":
+      return `
+        <form id="widgetForm">
+          <input type="hidden" name="templateId" value="${widget.templateId}">
+          <input type="hidden" name="widgetId" value="${widget.id}">
+          <input type="hidden" name="type" value="${widget.type}">
+          
+          <div class="form-group">
+            <label>Title</label>
+            <input type="text" name="title" placeholder="My Button">
+          </div>
+
+          <div class="form-group">
+            <label>Datastream</label>
+            <select name="datastream">
+              <option value="">Select a datastream</option>
+              <option value="ds1">Datastream 1</option>
+              <option value="ds2">Datastream 2</option>
+              <option value="ds3">Datastream 3</option>
+            </select>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>Press Value</label>
+              <input type="text" name="pressValue" value="1">
+            </div>
+            <div class="form-group">
+              <label>Release Value</label>
+              <input type="text" name="releaseValue" value="0">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Button Color</label>
+            <input type="color" name="color" value="#3498db">
+          </div>
+        </form>
+      `;
+
+    case "visual":
+    case "graph":
+      return `
+        <form id="widgetForm">
+          <input type="hidden" name="templateId" value="${widget.templateId}">
+          <input type="hidden" name="widgetId" value="${widget.id}">
+          <input type="hidden" name="type" value="${widget.type}">
+          
+          <div class="form-group">
+            <label>Title</label>
+            <input type="text" name="title" placeholder="My Graph">
+          </div>
+
+          <div class="form-group">
+            <label>Datastream</label>
+            <select name="datastream">
+              <option value="">Select a datastream</option>
+              <option value="ds1">Datastream 1</option>
+              <option value="ds2">Datastream 2</option>
+              <option value="ds3">Datastream 3</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>Graph Type</label>
+            <select name="graphType">
+              <option value="line">Line Chart</option>
+              <option value="bar">Bar Chart</option>
+              <option value="area">Area Chart</option>
+            </select>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>X-Axis Label</label>
+              <input type="text" name="xLabel" placeholder="Time">
+            </div>
+            <div class="form-group">
+              <label>Y-Axis Label</label>
+              <input type="text" name="yLabel" placeholder="Value">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Graph Color</label>
+            <input type="color" name="color" value="#3498db">
+          </div>
+        </form>
+      `;
+
+    default:
+      return `
+        <div style="text-align: center; padding: 30px 0;">
+          <i class="fas fa-exclamation-circle" style="font-size: 48px; color: #e74c3c; margin-bottom: 15px;"></i>
+          <h3>Widget Type Not Supported</h3>
+          <p>Configuration for widget type "${widget.type}" is not available.</p>
+        </div>
+      `;
+  }
+}
+
+  function openWidgetModal() {
+  const modal = document.getElementById("widgetModal");
+  const body = document.getElementById("widgetConfigBody");
+  const { templateId, widgetId, type } = getQueryParams();
+  const widget = { templateId, id: widgetId, type: type || "switch" };
+  
+  // Update modal title based on widget type
+  document.getElementById("modalTitle").textContent = 
+    `Configure ${type ? type.charAt(0).toUpperCase() + type.slice(1) : 'Widget'}`;
+  
+  // Update widget type display
+  document.getElementById("widget-type-display").textContent = type ? `Type: ${type}` : '';
+  
+  // Inject the widget form
+  body.innerHTML = getFormForWidget(widget);
+
+  // 👉 Hook events for live data push/poll
+  const form = document.getElementById("widgetForm");
+
+  if (type === "slider") {
+    const slider = form.querySelector("input[type='range']");
+    if (slider) {
+      slider.addEventListener("input", () => {
+        pushValue(templateId, widgetId, slider.value);
+      });
+      startPollingValue(templateId, widgetId, (val) => {
+        slider.value = val;
+      });
+    }
+  }
+
+  if (type === "switch") {
+    const checkbox = form.querySelector("input[type='checkbox']");
+    if (checkbox) {
+      checkbox.addEventListener("change", () => {
+        pushValue(templateId, widgetId, checkbox.checked ? "1" : "0");
+      });
+      startPollingValue(templateId, widgetId, (val) => {
+        checkbox.checked = (val === "1");
+      });
+    }
+  }
+
+  if (type === "button") {
+    const btn = form.querySelector("button");
+    if (btn) {
+      btn.addEventListener("click", () => {
+        pushValue(templateId, widgetId, "1");
+        setTimeout(() => pushValue(templateId, widgetId, "0"), 500);
+      });
+    }
+  }
+
+  if (type === "gauge" || type === "value") {
+    const display = form.querySelector(".value-display");
+    if (display) {
+      startPollingValue(templateId, widgetId, (val) => {
+        display.textContent = val;
+      });
+    }
+  }
+
+  if (type === "graph") {
+    const graph = form.querySelector("canvas");
+    if (graph) {
+      startPollingValue(templateId, widgetId, (val) => {
+        const numVal = parseFloat(val);
+        if (!isNaN(numVal)) {
+          chart.data.labels.push(new Date().toLocaleTimeString());
+          chart.data.datasets[0].data.push(numVal);
+          chart.update();
+        }
+      });
+    }
+  }
+
+  modal.classList.add("active");
+}
+jj
+  function closeWidgetModal() {
+    const modal = document.getElementById("widgetModal");
+    modal.classList.remove("active");
+  }
+
+ function saveWidgetConfig() {
+  const form = document.getElementById("widgetForm");
+  if (!form) return;
+
+  const data = Object.fromEntries(new FormData(form).entries());
+  console.log("Saving widget config:", data);
+
+  // Build backend URL (templateId + widgetId act like templateId/pin)
+  const url = `http://localhost:8080/api/datastreams/${data.templateId}/${data.widgetId}`;
+
+
+  // Send API request
+  fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded"
+    },
+    body: new URLSearchParams({
+      type: data.type,
+      value: "0", // default or actual initial value
+      title: data.title,
+      configJson: JSON.stringify(data) // store the whole widget config
+    })
+  })
+  .then(res => {
+    if (!res.ok) throw new Error("Failed to save config");
+    return res.json();
+  })
+  .then(saved => {
+    console.log("Saved in DB:", saved);
+    alert("Configuration saved successfully!");
+    closeWidgetModal();
+  })
+  .catch(err => {
+    console.error("Error saving config:", err);
+    alert("Error saving configuration!");
+  });
+}
+
+
+  // Auto-open modal when page loads if parameters are present
+  document.addEventListener("DOMContentLoaded", () => {
+    const { templateId, widgetId, type } = getQueryParams();
+    if (type) {
+      openWidgetModal();
+    }
+  });
+
+  // Close modal when clicking outside content
+  document.addEventListener("click", (e) => {
+    const modal = document.getElementById("widgetModal");
+    if (e.target === modal) {
+      closeWidgetModal();
+    }
+  });
+
+
+  //realtime data push 
+
+  // Push value to backend
+function pushValue(templateId, widgetId, value) {
+  fetch(`http://localhost:8080/api/datastreams/${templateId}/${widgetId}/value?value=${value}`, {
+    method: "POST"
+  }).catch(err => console.error("Push error:", err));
+}
+
+// Poll value from backend
+function startPollingValue(templateId, widgetId, updateFn) {
+  setInterval(() => {
+    fetch(`http://localhost:8080/api/datastreams/${templateId}/${widgetId}/value`)
+      .then(res => res.text())
+      .then(val => updateFn(val))
+      .catch(err => console.error("Poll error:", err));
+  }, 2000); // every 2s
+}
+
+
+  </script>
+</body>
+</html>
