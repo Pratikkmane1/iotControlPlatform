@@ -603,18 +603,79 @@
             margin: 15px 0;
         }
 
-
+        /* Widget Actions */
         .widget-actions button {
-    background:none;
-    border:none;
-    cursor:pointer;
-    font-size:16px;
-    margin-left:5px;
-    color: var(--gray);
-    transition: var(--transition);
-}
-.widget-actions button:hover { color: var(--secondary); transform: scale(1.1); }
+            background:none;
+            border:none;
+            cursor:pointer;
+            font-size:16px;
+            margin-left:5px;
+            color: var(--gray);
+            transition: var(--transition);
+        }
+        .widget-actions button:hover { color: var(--secondary); transform: scale(1.1); }
 
+        /* Template View Mode */
+        .template-view-mode {
+            display: none;
+            position: relative;
+        }
+        .template-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid var(--gray-light);
+        }
+        .template-title {
+            font-size: 24px;
+            font-weight: 600;
+            color: var(--primary);
+        }
+        .template-actions-header {
+            display: flex;
+            gap: 10px;
+        }
+        .view-widget {
+            pointer-events: auto;
+            opacity: 1;
+        }
+        .edit-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(255, 255, 255, 0.9);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            border-radius: var(--border-radius);
+            opacity: 0;
+            transition: var(--transition);
+            visibility: hidden;
+        }
+        .template-card:hover .edit-overlay {
+            opacity: 1;
+            visibility: visible;
+        }
+        .view-template-btn {
+            background: linear-gradient(to right, var(--secondary), var(--secondary-light));
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: var(--transition);
+            margin-bottom: 10px;
+        }
+        .view-template-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(52, 152, 219, 0.3);
+        }
 
         @media (max-width:1024px) {
             .sidebar { width:0; overflow:hidden; }
@@ -654,6 +715,24 @@
         <div class="user-info">
             <span>John Doe</span>
             <div class="user-avatar">JD</div>
+        </div>
+    </div>
+
+    <!-- Template View Mode (hidden by default) -->
+    <div id="templateViewMode" class="template-view-mode">
+        <div class="template-header">
+            <div class="template-title" id="viewTemplateName">Template View</div>
+            <div class="template-actions-header">
+                <button class="btn btn-secondary" id="backToTemplatesBtn">
+                    <i class="fas fa-arrow-left"></i> Back to Templates
+                </button>
+                <button class="btn btn-primary" id="editTemplateBtn">
+                    <i class="fas fa-edit"></i> Edit Template
+                </button>
+            </div>
+        </div>
+        <div class="dashboard-grid" id="templateViewGrid">
+            <!-- Widgets will be rendered here in view mode -->
         </div>
     </div>
 
@@ -801,9 +880,16 @@ const closeDeleteModal = document.getElementById('closeDeleteModal');
 const cancelDelete = document.getElementById('cancelDelete');
 const confirmDeleteBtn = document.getElementById('confirmDelete');
 const templateToDeleteName = document.getElementById('templateToDeleteName');
+const templateViewMode = document.getElementById('templateViewMode');
+const templateViewGrid = document.getElementById('templateViewGrid');
+const viewTemplateName = document.getElementById('viewTemplateName');
+const backToTemplatesBtn = document.getElementById('backToTemplatesBtn');
+const editTemplateBtn = document.getElementById('editTemplateBtn');
 
 let activeTemplateId = null; // Track selected template
 let templateToDeleteId = null; // Track template to delete
+let isViewMode = false;
+let currentViewTemplate = null;
 
 /************* Modal Open/Close *************/
 function openModal(modal){ modal.style.display='flex'; document.body.style.overflow='hidden'; }
@@ -838,14 +924,17 @@ function makeTemplateCard(template){
             #define BLYNK_TEMPLATE_ID "${template.templateId}"<br>
             #define BLYNK_TEMPLATE_NAME "${escapeQuotes(template.name)}"<br>
             #define BLYNK_AUTH_TOKEN "${escapeQuotes(template.authToken)}"
+        </div>
+        <div class="edit-overlay">
+            <button class="view-template-btn" onclick="openTemplateView('${template.templateId}', '${escapeHtml(template.name)}')">
+                <i class="fas fa-eye"></i> View Template
+            </button>
         </div>`;
     
     card.addEventListener('click', (e) => {
-        // Don't open editor if delete button was clicked
-        if (!e.target.closest('.delete-btn')) {
-            activeTemplateId = template.templateId;
-            loadDashboardLayout(template.templateId);
-            openModal(widgetEditorModal);
+        // Don't open editor if delete button or overlay buttons were clicked
+        if (!e.target.closest('.delete-btn') && !e.target.closest('.edit-overlay')) {
+            openTemplateView(template.templateId, template.name);
         }
     });
     return card;
@@ -863,6 +952,259 @@ async function fetchTemplates(){
         templates.forEach(t=>container.appendChild(makeTemplateCard(t)));
     }catch(e){ console.error(e); }
 }
+
+/************* Template View Mode *************/
+function openTemplateView(templateId, templateName) {
+    isViewMode = true;
+    currentViewTemplate = templateId;
+    viewTemplateName.textContent = templateName;
+    templateViewMode.style.display = 'block';
+    dashboardGrid.style.display = 'none';
+    
+    // Load and render the template widgets in view mode
+    loadViewLayout(templateId);
+}
+
+function backToTemplates() {
+    isViewMode = false;
+    currentViewTemplate = null;
+    templateViewMode.style.display = 'none';
+    dashboardGrid.style.display = 'grid';
+    templateViewGrid.innerHTML = '';
+}
+
+function editCurrentTemplate() {
+    if (currentViewTemplate) {
+        activeTemplateId = currentViewTemplate;
+        loadDashboardLayout(currentViewTemplate);
+        openModal(widgetEditorModal);
+    }
+}
+
+backToTemplatesBtn.addEventListener('click', backToTemplates);
+editTemplateBtn.addEventListener('click', editCurrentTemplate);
+
+/************* Load View Layout *************/
+async function loadViewLayout(templateId) {
+    const token = localStorage.getItem('jwtToken');
+    if (!token) return;
+
+    try {
+        // 1️⃣ Fetch template layout
+        const resTemplate = await fetch(`${API_BASE}/${templateId}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (!resTemplate.ok) throw new Error('Failed to load template');
+        const template = await resTemplate.json();
+
+        let layout = [];
+        if (template.layoutJson) {
+            const parsed = JSON.parse(template.layoutJson);
+            if (Array.isArray(parsed)) layout = parsed;
+            else if (parsed.widgets && Array.isArray(parsed.widgets)) layout = parsed.widgets;
+        }
+
+        // 2️⃣ Fetch all datastreams for this template
+        const resStreams = await fetch(`http://localhost:8080/api/datastreams/${templateId}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (!resStreams.ok) throw new Error('Failed to fetch datastreams');
+        const datastreams = await resStreams.json();
+
+        // 3️⃣ Merge layout with datastreams
+        const widgetsToRender = layout.map(lw => {
+            // If layoutJson only has type strings, lw will be string
+            if (typeof lw === 'string') {
+                // find datastream with matching type or just use first matching
+                const ds = datastreams.find(d => d.type === lw) || {};
+                return { ...ds, type: lw };
+            } else {
+                // if layoutJson has objects with pin/type
+                const ds = datastreams.find(d => d.pin === lw.pin) || {};
+                return { ...lw, ...ds };
+            }
+        });
+
+        // 4️⃣ Render
+        templateViewGrid.innerHTML = '';
+        if (widgetsToRender.length === 0) {
+            templateViewGrid.innerHTML = `<div class="device-card" style="grid-column: 1 / -1; text-align: center;">
+                <h3>No Widgets Configured</h3>
+                <p>This template doesn't have any widgets yet. Click the Edit button to add widgets.</p>
+            </div>`;
+        } else {
+            widgetsToRender.forEach(w => {
+                templateViewGrid.appendChild(
+                    createViewWidget(w.type, w.pin, w.value ?? 0, w.title ?? "")
+                );
+            });
+        }
+
+    } catch (e) {
+        console.error(e);
+        templateViewGrid.innerHTML = '<div class="device-card"><p>Error loading template</p></div>';
+    }
+}
+
+// datastreams: array of objects fetched from backend
+// Each object: { templateId, pin, type, title, value, ... }
+
+function renderDashboard(datastreams) {
+    console.log("📡 Datastreams from backend:", datastreams); // 🔍 log full datastreams array
+
+    const dashboardGrid = document.getElementById("dashboardGrid");
+    dashboardGrid.innerHTML = ""; // clear existing
+
+    datastreams.forEach(ds => {
+        console.log("🎨 Rendering dashboard widget with:", ds); // 🔍 log each ds
+        const widget = createViewWidget(ds.type, ds.pin, ds.value, ds.title);
+        dashboardGrid.appendChild(widget);
+    });
+}
+
+function createViewWidget(type, datastream, initialValue = 0, title = "", templateId = null) {
+    console.log("🛠️ createViewWidget called with:", { type, datastream, initialValue, title, templateId });
+
+    const widgetCard = document.createElement("div");
+    widgetCard.className = "device-card";
+
+    switch (type) {
+        case 'slider':
+            widgetCard.innerHTML = `
+                <div class="device-header">
+                    <div class="device-title">
+                        <div class="device-icon"><i class="fas fa-sliders-h"></i></div>
+                        ${title || "Slider Control"}
+                    </div>
+                    <div class="device-status online">ONLINE</div>
+                </div>
+                <div class="widget">
+                    <div class="widget-title">${title || "Intensity Control"}</div>
+                    <div class="slider-widget">
+                        <input type="range" min="0" max="100" step="1" value="${initialValue}" class="slider-input">
+                        <div class="slider-value">${initialValue}%</div>
+                    </div>
+                </div>`;
+
+            const slider = widgetCard.querySelector(".slider-input");
+            const sliderValue = widgetCard.querySelector(".slider-value");
+
+            slider.addEventListener("input", () => {
+                sliderValue.textContent = `${slider.value}%`;
+            });
+
+            slider.addEventListener("change", async () => {
+                await sendValueToBackend(datastream, templateId, slider.value);
+            });
+            break;
+
+        case 'switch':
+            widgetCard.innerHTML = `
+                <div class="device-header">
+                    <div class="device-title">
+                        <div class="device-icon"><i class="fas fa-toggle-on"></i></div>
+                        ${title || "Switch Control"}
+                    </div>
+                    <div class="device-status online">ONLINE</div>
+                </div>
+                <div class="widget">
+                    <div class="widget-title">${title || "Power Switch"}</div>
+                    <label class="switch">
+                        <input type="checkbox" class="switch-input" ${initialValue == 1 ? "checked" : ""}>
+                        <span class="slider round"></span>
+                    </label>
+                </div>`;
+
+            const switchInput = widgetCard.querySelector(".switch-input");
+            switchInput.addEventListener("change", async () => {
+                const value = switchInput.checked ? "1" : "0";
+                await sendValueToBackend(datastream, templateId, value);
+            });
+            break;
+
+        case 'button':
+            widgetCard.innerHTML = `
+                <div class="device-header">
+                    <div class="device-title">
+                        <div class="device-icon"><i class="fas fa-square"></i></div>
+                        ${title || "Button Control"}
+                    </div>
+                    <div class="device-status online">ONLINE</div>
+                </div>
+                <div class="widget">
+                    <div class="widget-title">${title || "Push Button"}</div>
+                    <button class="btn btn-primary widget-button">Press</button>
+                </div>`;
+
+            const button = widgetCard.querySelector(".widget-button");
+            button.addEventListener("click", async () => {
+                await sendValueToBackend(datastream, templateId, "1");
+                setTimeout(() => sendValueToBackend(datastream, templateId, "0"), 500);
+            });
+            break;
+
+        case 'gauge':
+            widgetCard.innerHTML = `
+                <div class="device-header">
+                    <div class="device-title">
+                        <div class="device-icon"><i class="fas fa-tachometer-alt"></i></div>
+                        ${title || "Gauge"}
+                    </div>
+                    <div class="device-status online">ONLINE</div>
+                </div>
+                <div class="widget">
+                    <div class="widget-title">${title || "Value"}</div>
+                    <canvas class="gauge-canvas" width="150" height="150"></canvas>
+                </div>`;
+            break;
+
+        case 'value':
+            widgetCard.innerHTML = `
+                <div class="device-header">
+                    <div class="device-title">
+                        <div class="device-icon"><i class="fas fa-digital-tachograph"></i></div>
+                        ${title || "Value Display"}
+                    </div>
+                    <div class="device-status online">ONLINE</div>
+                </div>
+                <div class="widget">
+                    <div class="widget-title">${title || "Current Value"}</div>
+                    <div class="value-display">${initialValue}</div>
+                </div>`;
+            break;
+
+        default:
+            widgetCard.innerHTML = `<div class="device-card"><p>Unknown widget type: ${type}</p></div>`;
+            break;
+    }
+
+    return widgetCard;
+}
+
+// Updated sendValueToBackend
+async function sendValueToBackend(pin, templateId, value) {
+    if (!pin || !templateId) {
+        console.error("sendValueToBackend called with missing pin or templateId!", { pin, templateId, value });
+        return;
+    }
+
+    const token = localStorage.getItem('jwtToken');
+    try {
+        await fetch(`http://localhost:8080/api/datastreams/${templateId}/${pin}/value`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ value })
+        });
+    } catch (e) {
+        console.error(e);
+    }
+}
+
+
+
 
 /************* Delete Template Functionality *************/
 function showDeleteModal(templateId, templateName) {
@@ -987,7 +1329,6 @@ function createEditorWidget(type) {
     w.className = 'editor-widget';
     w.dataset.widgetType = type;
 
-    // cleaner unified structure
     w.innerHTML = `
         <div class="editor-widget-header">
             <div class="editor-widget-title">${widgetTitle(type)}</div>
@@ -1002,10 +1343,9 @@ function createEditorWidget(type) {
     makeDraggable(w);
 
     if (typeof initWidgetDataStream === "function") {
-        initWidgetDataStream(w, type); // function from widgetdatastream.js
+        initWidgetDataStream(w, type);
     }
 
-    // attach settings button click
     const settingsBtn = w.querySelector('.widget-settings');
     if (settingsBtn) {
         settingsBtn.addEventListener('click', e => {
@@ -1014,18 +1354,13 @@ function createEditorWidget(type) {
             const widgetId = w.dataset.widgetId || generateWidgetId();
             w.dataset.widgetId = widgetId;
 
-            // ✅ Redirect to widgetdatastream.html instead of modal
             const url = `widgetdatastream.html?templateId=${activeTemplateId}&widgetId=${widgetId}&type=${widgetType}`;
-            window.open(url, "_blank"); // use "_self" if same tab preferred
+            window.open(url, "_blank");
         });
     }
 
     return w;
 }
-
-
-
-//helper function above function
 
 function widgetTitle(type){
     switch(type){
@@ -1038,39 +1373,6 @@ function widgetTitle(type){
         default: return 'Widget';
     }
 }
-
-function openWidgetModal(widget) {
-    // Show modal
-    document.getElementById('widget-config-modal').style.display = 'block';
-
-    // Reset all optional fields first (hide them)
-    document.getElementById('min-field').style.display = 'none';
-    document.getElementById('max-field').style.display = 'none';
-    document.getElementById('step-field').style.display = 'none';
-    document.getElementById('units-field').style.display = 'none';
-
-    // Fill common fields
-    document.getElementById('widget-title').value = widget.title || '';
-    document.getElementById('widget-pin').value = widget.pin || '';
-    document.getElementById('widget-id').value = widget.id || '';
-    document.getElementById('widget-type').value = widget.type;
-
-    // ✅ Conditional fields based on widget type
-    if (widget.type === 'button' || widget.type === 'switch') {
-        document.getElementById('widget-type').value = 'OUTPUT';
-    } else if (widget.type === 'slider') {
-        document.getElementById('widget-type').value = 'OUTPUT';
-        document.getElementById('min-field').style.display = 'block';
-        document.getElementById('max-field').style.display = 'block';
-        document.getElementById('step-field').style.display = 'block';
-    } else if (widget.type === 'gauge' || widget.type === 'label') {
-        document.getElementById('widget-type').value = 'INPUT';
-        document.getElementById('min-field').style.display = 'block';
-        document.getElementById('max-field').style.display = 'block';
-        document.getElementById('units-field').style.display = 'block';
-    }
-}
-
 
 function widgetBody(type){
     switch(type){
@@ -1092,7 +1394,6 @@ function generateWidgetId(){
     return 'w_' + Math.random().toString(36).substr(2,9);
 }
 
-
 [...editorGrid.children].forEach(makeDraggable);
 
 function getDragAfterElement(container, y){
@@ -1113,19 +1414,17 @@ saveDashboardBtn.addEventListener('click', async () => {
     if (!token) return alert("Please login");
 
     try {
-        // Fetch the template data first
         const resGet = await fetch(`${API_BASE}/${activeTemplateId}`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         if (!resGet.ok) throw new Error('Template not found');
         const template = await resGet.json();
 
-        // Update template with new layout
         const updatedTemplate = {
             templateId: template.templateId,
             name: template.name,
             description: template.description,
-            layoutJson: JSON.stringify(layout) // save as JSON string
+            layoutJson: JSON.stringify(layout)
         };
 
         const resPost = await fetch(`${API_BASE}`, {
@@ -1135,20 +1434,20 @@ saveDashboardBtn.addEventListener('click', async () => {
         });
         if (!resPost.ok) throw new Error(await resPost.text());
         
-        // Show success message and close the modal
         alert("Dashboard layout saved!");
-        
-        // Close the widget editor modal
         closeModal(widgetEditorModal);
         
-        // Refresh the templates to show any changes
+        // If we were in view mode, refresh the view
+        if (isViewMode && currentViewTemplate === activeTemplateId) {
+            loadViewLayout(activeTemplateId);
+        }
+        
         fetchTemplates();
         
     } catch (e) {
         alert("Error: " + e.message);
     }
 });
-
 
 /************* Load Dashboard Layout *************/
 async function loadDashboardLayout(templateId) {
@@ -1169,7 +1468,7 @@ async function loadDashboardLayout(templateId) {
             if (Array.isArray(parsed)) {
                 layout = parsed;
             } else if (parsed.widgets && Array.isArray(parsed.widgets)) {
-                layout = parsed.widgets; // if wrapped in { widgets: [...] }
+                layout = parsed.widgets;
             } else {
                 console.warn("Unknown layout format:", parsed);
                 layout = [];
@@ -1182,7 +1481,7 @@ async function loadDashboardLayout(templateId) {
         });
     } catch (e) {
         console.error(e);
-        editorGrid.innerHTML = ''; // empty dashboard if no layout
+        editorGrid.innerHTML = '';
     }
 }
 
